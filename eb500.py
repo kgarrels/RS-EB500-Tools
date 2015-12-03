@@ -16,7 +16,7 @@ class Eb500Cmd (telnetlib.Telnet):
     def send_cmd(self, cmd):
         print "> "+ cmd
         self.write(cmd+"\n")
-        ans = self.read_eager()
+        ans = self.read_eager() #FIXME: does not receive anything
         print "< " + ans
         return ans
 
@@ -30,6 +30,13 @@ def StrToHex(s):
         lst.append(hv)
         lst.append(" ")
     return reduce(lambda x,y:x+y, lst)
+
+def OwnIP():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("gmail.com",80))
+    ip = (s.getsockname()[0])
+    s.close()
+    return ip
 
 
 def parseMessage(msg):
@@ -46,7 +53,7 @@ def parseMessage(msg):
     if tag == 401:  # audio
         #frame_count, reserved, opt_header_length, selector_flags, opt_header = struct.unpack('!HcBL42s', msg[20:70])
         #print "audio trace, frames: ", frameCount, ", opt header length: ", optHeaderLength, ", selector flags: ", selectorFlags
-        stream.write(msg[70:])
+        stream.write(msg[70:])  #FIXME: this is maybe too simple, we rely on no header present
     else:
         print "ignored frame, tag: ", tag
 
@@ -60,8 +67,8 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(('0.0.0.0', UDP_PORT))
 
 #eb500.send_cmd('TRACE:UDP:DEL ALL')
-eb500.send_cmd('TRACE:UDP:TAG:ON \'192.168.1.24\',' + UDP_PORT.__str__() + ',MSC,AUDIO')
-eb500.send_cmd('TRACE:UDP:FLAG:ON \'192.168.1.24\',' + UDP_PORT.__str__() + ',\'VOLT:AC\', \'FREQ:OFFS\', \'FREQ:RX\', \'OPT\',\'SWAP\'')    #,\'SWAP\'
+eb500.send_cmd('TRACE:UDP:TAG:ON \''+OwnIP()+'\',' + UDP_PORT.__str__() + ',MSC,AUDIO')
+eb500.send_cmd('TRACE:UDP:FLAG:ON \''+OwnIP()+'\',' + UDP_PORT.__str__() + ',\'VOLT:AC\', \'FREQ:OFFS\', \'FREQ:RX\', \'OPT\',\'SWAP\'')    #,\'SWAP\'
 
 p = pyaudio.PyAudio()
 stream = p.open(format=pyaudio.paInt16,
