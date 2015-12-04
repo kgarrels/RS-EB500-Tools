@@ -1,3 +1,20 @@
+#
+#Copyright 2015 Kai Garrels
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+
+
 import telnetlib
 import socket
 import struct
@@ -16,7 +33,7 @@ class Eb500Cmd (telnetlib.Telnet):
     def send_cmd(self, cmd):
         print "> "+ cmd
         self.write(cmd+"\n")
-        ans = self.read_eager() #FIXME: does not receive anything
+        ans = self.read_eager()     # FIXME: does not receive anything
         print "< " + ans
         return ans
 
@@ -38,26 +55,34 @@ def OwnIP():
     s.close()
     return ip
 
-
 def parseMessage(msg):
-    tag, length = struct.unpack('!HH', msg[16:20])
-    data = msg[20:]
+    global eb200_magic, eb200_sequence
 
-    if __kai_debug__:
-        print "raw header:   ", StrToHex(msg[0:16])
-        print "EB200 header: ", struct.unpack('!LHHHHL', msg[0:16])     #eb200 header
-        print "raw gen att:  ", StrToHex(msg[16:20])
-        print "tag, len:     ", tag, length
-        print "data:         ", StrToHex(data)
+    # decode eb200 header
+#    magic, ver_min, ver_maj, seq_low, seq_high, data_Size =  struct.unpack('!LHHHHL', msg[0:16])     # eb200 header
+#    if (eb200_magic == 0) & (magic == 0x0EB200):
+#        print "received 1st EB200 frame, version ",ver_maj,".",ver_min
+#        eb200_magic=magic
 
+    # decode generic attribute
+    tag, length = struct.unpack('!HH', msg[16:20])          # generic attribute, we need the tag
+
+    # decode attribute according to tag
     if tag == 401:  # audio
-        #frame_count, reserved, opt_header_length, selector_flags, opt_header = struct.unpack('!HcBL42s', msg[20:70])
-        #print "audio trace, frames: ", frameCount, ", opt header length: ", optHeaderLength, ", selector flags: ", selectorFlags
-        stream.write(msg[70:])  #FIXME: this is maybe too simple, we rely on no header present
+        frame_count, reserved, opt_header_length, selector_flags = struct.unpack('!HcBL', msg[20:28])
+#        if opt_header_length != 0:
+#            print "opt header length: ", opt_header_length
+#            opt_header = struct.unpack('<hhLLH8sL6sQh', msg[28:28+opt_header_length])
+#            print "opt header: ", opt_header
+
+        # outout, assume audio mode 1
+        stream.write(msg[48+opt_header_length:])
     else:
         print "ignored frame, tag: ", tag
 
-
+# initializations
+eb200_magic = 0
+eb200_sequence = -1
 
 # open command channel
 eb500=Eb500Cmd(EB500_ADDR, CMD_PORT)
