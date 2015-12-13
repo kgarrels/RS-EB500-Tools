@@ -1,4 +1,5 @@
-#
+#!/usr/bin/env python
+
 #Copyright 2015 Kai Garrels
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,13 +57,19 @@ def OwnIP():
     return ip
 
 def parseMessage(msg):
-    global eb200_magic, eb200_sequence
+    global eb200_magic, eb200_sequence, packets, lost
 
     # decode eb200 header
-#    magic, ver_min, ver_maj, seq_low, seq_high, data_Size =  struct.unpack('!LHHHHL', msg[0:16])     # eb200 header
-#    if (eb200_magic == 0) & (magic == 0x0EB200):
-#        print "received 1st EB200 frame, version ",ver_maj,".",ver_min
-#        eb200_magic=magic
+    magic, ver_min, ver_maj, seq_low, seq_high, data_Size =  struct.unpack('!LHHHHL', msg[0:16])     # eb200 header
+    if (eb200_magic == 0) & (magic == 0x0EB200):
+        print "received 1st EB200 frame, version ",ver_maj,".",ver_min
+        eb200_magic=magic
+
+    if eb200_sequence != seq_low-1:
+        lost = lost +1
+        print "**** lost packet, ", lost, " of ", packets
+    eb200_sequence = seq_low
+    packets = packets+1
 
     # decode generic attribute
     tag, length = struct.unpack('!HH', msg[16:20])          # generic attribute, we need the tag
@@ -70,19 +77,24 @@ def parseMessage(msg):
     # decode attribute according to tag
     if tag == 401:  # audio
         frame_count, reserved, opt_header_length, selector_flags = struct.unpack('!HcBL', msg[20:28])
-#        if opt_header_length != 0:
-#            print "opt header length: ", opt_header_length
-#            opt_header = struct.unpack('<hhLLH8sL6sQh', msg[28:28+opt_header_length])
-#            print "opt header: ", opt_header
+        #print "frames: ", frame_count
+        if opt_header_length != 0:
+            #print "opt header length: ", opt_header_length, "msg length: ", len(msg)
+            opt_header = struct.unpack('<hhLLH8sL6sQh', msg[28:28+opt_header_length])
+            #print "opt header: ", opt_header
 
         # outout, assume audio mode 1
-        stream.write(msg[48+opt_header_length:])
+        err = stream.write(msg[28+opt_header_length:])
+        if err != None:
+            print "pyudio write error: ", err
     else:
         print "ignored frame, tag: ", tag
 
 # initializations
 eb200_magic = 0
 eb200_sequence = -1
+packets = 1
+lost = 0
 
 # open command channel
 eb500=Eb500Cmd(EB500_ADDR, CMD_PORT)
@@ -91,9 +103,10 @@ eb500=Eb500Cmd(EB500_ADDR, CMD_PORT)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(('0.0.0.0', UDP_PORT))
 
-#eb500.send_cmd('TRACE:UDP:DEL ALL')
-eb500.send_cmd('TRACE:UDP:TAG:ON \''+OwnIP()+'\',' + UDP_PORT.__str__() + ',MSC,AUDIO')
+eb500.send_cmd('TRACE:UDP:DEL ALL')
+eb500.send_cmd('TRACE:UDP:TAG:ON \''+OwnIP()+'\',' + UDP_PORT.__str__() + ',FSC,MSC,AUDIO')
 eb500.send_cmd('TRACE:UDP:FLAG:ON \''+OwnIP()+'\',' + UDP_PORT.__str__() + ',\'VOLT:AC\', \'FREQ:OFFS\', \'FREQ:RX\', \'OPT\',\'SWAP\'')    #,\'SWAP\'
+#eb500.send_cmd('TRACE:UDP:FLAG:ON \''+OwnIP()+'\',' + UDP_PORT.__str__() + '\'OPT\',\'SWAP\'')    #,\'SWAP\'
 
 p = pyaudio.PyAudio()
 stream = p.open(format=pyaudio.paInt16,
