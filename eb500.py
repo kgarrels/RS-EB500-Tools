@@ -23,7 +23,7 @@ import pyaudio
 
 EB500_ADDR = '192.168.2.5'
 CMD_PORT = 5555
-UDP_PORT = 19200
+UDP_PORT = 19000
 
 __kai_debug__ = False
 
@@ -33,7 +33,7 @@ class Eb500Cmd (telnetlib.Telnet):
 
     def send_cmd(self, cmd):
         print "> "+ cmd
-        self.write(cmd+"\n")
+        self.write(cmd+"\r")
         ans = self.read_eager()     # FIXME: does not receive anything
         print "< " + ans
         return ans
@@ -50,11 +50,14 @@ def StrToHex(s):
     return reduce(lambda x,y:x+y, lst)
 
 def OwnIP():
+    """
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("gmail.com",80))
     ip = (s.getsockname()[0])
     s.close()
     return ip
+    """
+    return '192.168.2.1'
 
 def parseMessage(msg):
     global eb200_magic, eb200_sequence, packets, lost
@@ -103,10 +106,13 @@ eb500=Eb500Cmd(EB500_ADDR, CMD_PORT)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(('0.0.0.0', UDP_PORT))
 
-eb500.send_cmd('TRACE:UDP:DEL ALL')
-eb500.send_cmd('TRACE:UDP:TAG:ON \''+OwnIP()+'\',' + UDP_PORT.__str__() + ',FSC,MSC,AUDIO')
-eb500.send_cmd('TRACE:UDP:FLAG:ON \''+OwnIP()+'\',' + UDP_PORT.__str__() + ',\'VOLT:AC\', \'FREQ:OFFS\', \'FREQ:RX\', \'OPT\',\'SWAP\'')    #,\'SWAP\'
-#eb500.send_cmd('TRACE:UDP:FLAG:ON \''+OwnIP()+'\',' + UDP_PORT.__str__() + '\'OPT\',\'SWAP\'')    #,\'SWAP\'
+eb500.send_cmd('TRAC:UDP:DEL ALL')
+eb500.send_cmd('TRAC:UDP:TAG \"'+OwnIP()+'\",' + UDP_PORT.__str__() + ',FSCAN,MSCAN,AUDIO')
+eb500.send_cmd('TRAC:UDP:FLAG \"'+OwnIP()+'\",' + UDP_PORT.__str__() + ',\"VOLT:AC\",\"FREQ:OFFS\",\"FREQ:RX\",\"OPT\",\"SWAP\"')    #,\'SWAP\'
+eb500.send_cmd('syst:aud:rem:mod 1')
+
+#eb500.send_cmd('SYST:IF:REM:MODE LONG')
+
 
 p = pyaudio.PyAudio()
 stream = p.open(format=pyaudio.paInt16,
