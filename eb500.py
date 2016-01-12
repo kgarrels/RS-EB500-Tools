@@ -175,7 +175,7 @@ sndfl_stream = p.open(output_device_index = 4,
                 rate=32000,
                 output=True)
 
-iq_file = open('/Users/kai/iq.raw','w')
+iq_file = open('iq.raw','w')
 
 try:
     while True:
