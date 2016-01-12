@@ -20,6 +20,8 @@ import telnetlib
 import socket
 import struct
 import pyaudio
+import sys
+import termios
 
 EB500_ADDR = '192.168.2.5'
 CMD_PORT = 5555
@@ -27,6 +29,10 @@ UDP_PORT = 19000
 TCP_PORT = 5565
 
 __kai_debug__ = False
+
+
+
+
 
 class Eb500Cmd (telnetlib.Telnet):
     def __init__(self, host=None, port=0):
@@ -36,7 +42,7 @@ class Eb500Cmd (telnetlib.Telnet):
         print "> "+ cmd
         self.write(cmd+"\n")
         ans = self.read_eager()     # FIXME: does not receive anything
-        print "< " + ans
+        #print "< " + ans
         return ans
 
 
@@ -60,6 +66,7 @@ def OwnIP():
 def parseMessage(msg):
     global eb200_magic, eb200_sequence, packets, lost, old_header
 
+    err = None
     # decode eb200 header
     magic, ver_min, ver_maj, seq_low, seq_high, data_Size =  struct.unpack('!LHHHHL', msg[0:16])     # eb200 header
     if (eb200_magic == 0) & (magic == 0x0EB200):
@@ -75,6 +82,7 @@ def parseMessage(msg):
     # decode generic attribute
     tag, length = struct.unpack('!HH', msg[16:20])          # generic attribute, we need the tag
 
+
     # decode attribute according to tag
     if tag == 401:  # audio
         frame_count, reserved, opt_header_length, selector_flags = struct.unpack('!HcBL', msg[20:28])
@@ -85,8 +93,11 @@ def parseMessage(msg):
             if (opt_header[0:7] != old_header[0:7]) & (opt_header[0]) == 1:
                 print "audio", opt_header[2]/1e6, "MHz", opt_header[5].split('\x00')[0], opt_header[3]/1e3, "kHz"
                 old_header = opt_header
-        # outout, assume audio mode 1
-        err = stream.write(msg[28+opt_header_length:])
+        # output, assume audio mode 1. Audio goes to default device and soundflower in parallel
+        err = audio_stream.write(msg[28+opt_header_length:])
+        if err != None:
+            print "pyudio write error: ", err
+        err = sndfl_stream.write(msg[28+opt_header_length:])
         if err != None:
             print "pyudio write error: ", err
     elif tag == 501:  # IFPan
@@ -104,9 +115,19 @@ def parseMessage(msg):
         if packets%20 == 0:
             print "IFPan", frame_count, ", min", min(if_pan), "max ", max(if_pan)
             #here comes a hack to set the level ragen according to the actual signal situation
-            #eb500.send_cmd('stat:ext:data #219564L000009:0:0 '+str(min(if_pan[0])-50))
-            #eb500.send_cmd('stat:ext:data #218563L000008:0:0 '+str(max(if_pan[0])+10))
-
+            #eb500.send_cmd('stat:ext:data #219564L000009:0:0 '+str(min(if_pan[0])-30))
+            #eb500.send_cmd('stat:ext:data #218563L000008:0:0 '+str(max(if_pan[0])+80))
+    elif tag == 901:  # IFPan
+        frame_count, reserved, opt_header_length, selector_flags = struct.unpack('!HcBL', msg[20:28])
+        #print "frames: ", frame_count
+        if opt_header_length != 0:
+            #print "opt header length: ", opt_header_length, "msg length: ", len(msg)
+            opt_header = struct.unpack('<hhLLLHhHh8sQL4sQh', msg[28:28+opt_header_length])
+            #print "opt header: ", opt_header
+        # now we have the values
+        iq_file.write(msg[28+opt_header_length:])
+        if packets%200 == 0:
+            print 'IQ data'
     else:
         print "ignored frame, tag: ", tag
 
@@ -116,50 +137,59 @@ eb200_sequence = -1
 packets = 1
 lost = 0
 old_header = (0,0,0,0,0,0,0,0,0)
-udp = True
 
 # open command channel
 eb500=Eb500Cmd(EB500_ADDR, CMD_PORT)
 
-if udp:
-    # open udp channel
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(('0.0.0.0', UDP_PORT))
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+# open udp channel
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.bind(('0.0.0.0', UDP_PORT))
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    #eb500.send_cmd('TRAC:UDP:DEL ALL')
-    eb500.send_cmd('TRAC:UDP:TAG \"'+OwnIP()+'\",' + UDP_PORT.__str__() + ',AUDIO,IFPAN')
-    eb500.send_cmd('TRAC:UDP:FLAG \"'+OwnIP()+'\",' + UDP_PORT.__str__() + ',\"OPT\",\"SWAP\"')    #,\'SWAP\'
-else:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind((OwnIP(), TCP_PORT))
-    sock.connect((EB500_ADDR, TCP_PORT))
-    eb500.send_cmd('TRAC:TCP:DEL ALL')
-    eb500.send_cmd('TRAC:TCP:TAG \"'+OwnIP()+'\",' + TCP_PORT.__str__() + ',AUDIO')
-    eb500.send_cmd('TRAC:TCP:FLAG \"'+OwnIP()+'\",' + TCP_PORT.__str__() + ',\"OPT\",\"SWAP\"')    #,\'SWAP\'
-    print "socket ", sock
 
-eb500.send_cmd('syst:aud:rem:mod 1')
+cmd_str = ''
+for arg in sys.argv:
+    if arg == 'au':
+        cmd_str += ',AUDIO'
+    elif arg == 'if':
+        cmd_str += ',IFPan'
+    elif arg == 'iq':
+        cmd_str += ',IF'
 
-#eb500.send_cmd('SYST:IF:REM:MODE LONG')
 
+eb500.send_cmd('TRAC:UDP:DEL ALL')
+eb500.send_cmd('TRAC:UDP:TAG \"'+OwnIP()+'\",' + UDP_PORT.__str__() + cmd_str)
+eb500.send_cmd('TRAC:UDP:FLAG \"'+OwnIP()+'\",' + UDP_PORT.__str__() + ',\"OPT\",\"SWAP\"')
+
+eb500.send_cmd('SYST:AUD:REM:MODE 1')
+eb500.send_cmd('SYST:IF:REM:MODE SHORT')
 
 p = pyaudio.PyAudio()
-stream = p.open(format=pyaudio.paInt16,
+audio_stream = p.open(format=pyaudio.paInt16,
                 channels=2,
                 rate=32000,
                 output=True)
+sndfl_stream = p.open(output_device_index = 4,
+                format=pyaudio.paInt16,
+                channels=2,
+                rate=32000,
+                output=True)
+
+iq_file = open('/Users/kai/iq.raw','w')
+
 try:
     while True:
-        data, addr = sock.recvfrom(10240) # buffer size is 1024 bytes
+        data, addr = sock.recvfrom(102400) # buffer size is 1024 bytes
         #print ">>>>> received message, len:", len(data), " from: ", addr
         parseMessage(data)
 finally:
     eb500.close()
     sock.close()
-    stream.stop_stream()
-    stream.close()
+    audio_stream.stop_stream()
+    sndfl_stream.stop_stream()
+    audio_stream.close()
+    sndfl_stream.close()
     p.terminate()
+    iq_file.close()
 
     print "bye bye!"
