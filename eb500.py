@@ -22,16 +22,13 @@ import struct
 import pyaudio
 import sys
 import termios
+import stat, os, datetime
+
 
 EB500_ADDR = '192.168.2.5'
 CMD_PORT = 5555
 UDP_PORT = 19000
 TCP_PORT = 5565
-
-__kai_debug__ = False
-
-
-
 
 
 class Eb500Cmd (telnetlib.Telnet):
@@ -91,13 +88,15 @@ def parseMessage(msg):
             #print "opt header length: ", opt_header_length, "msg length: ", len(msg)
             opt_header = struct.unpack('<hhLLH8sL6sQh', msg[28:28+opt_header_length])
             if (opt_header[0:7] != old_header[0:7]) & (opt_header[0]) == 1:
-                print "audio", opt_header[2]/1e6, "MHz", opt_header[5].split('\x00')[0], opt_header[3]/1e3, "kHz"
+                time = datetime.datetime(1970,1,1) + datetime.timedelta(microseconds=opt_header[8]/1000)       #audio time stamp
+                print "audio", (opt_header[2]/1e6).__format__(".5f"), "MHz", opt_header[5].split('\x00')[0], opt_header[3]/1e3, "kHz", \
+                      "latency", (datetime.datetime.utcnow()-time).microseconds / 1000, "ms"
                 old_header = opt_header
         # output, assume audio mode 1. Audio goes to default device and soundflower in parallel
         err = audio_stream.write(msg[28+opt_header_length:])
         if err != None:
             print "pyudio write error: ", err
-        err = sndfl_stream.write(msg[28+opt_header_length:])
+#        err = sndfl_stream.write(msg[28+opt_header_length:])
         if err != None:
             print "pyudio write error: ", err
     elif tag == 501:  # IFPan
@@ -127,7 +126,7 @@ def parseMessage(msg):
         # now we have the values
         iq_file.write(msg[28+opt_header_length:])
         if packets%200 == 0:
-            print 'IQ data'
+            print 'IQ data' #, opt_header
     else:
         print "ignored frame, tag: ", tag
 
@@ -146,6 +145,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(('0.0.0.0', UDP_PORT))
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
+iq_file = False
 
 cmd_str = ''
 for arg in sys.argv:
@@ -154,7 +154,11 @@ for arg in sys.argv:
     elif arg == 'if':
         cmd_str += ',IFPan'
     elif arg == 'iq':
-        cmd_str += ',IF'
+        cmd_str += ',IF'    # TODO: should have a fifo warning or option
+        iq_file = open('iq.raw','w')
+    else:
+        print "invalid argument ", arg
+
 
 
 eb500.send_cmd('TRAC:UDP:DEL ALL')
@@ -175,13 +179,13 @@ sndfl_stream = p.open(output_device_index = 4,
                 rate=32000,
                 output=True)
 
-iq_file = open('iq.raw','w')
+
 
 try:
     while True:
-        data, addr = sock.recvfrom(102400) # buffer size is 1024 bytes
-        #print ">>>>> received message, len:", len(data), " from: ", addr
+        data, addr = sock.recvfrom(102400) # get large UDP packet from receiver
         parseMessage(data)
+
 finally:
     eb500.close()
     sock.close()
@@ -190,6 +194,8 @@ finally:
     audio_stream.close()
     sndfl_stream.close()
     p.terminate()
-    iq_file.close()
+    if iq_file != False:
+        iq_file.close()
+
 
     print "bye bye!"
