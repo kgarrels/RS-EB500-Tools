@@ -26,10 +26,12 @@ import stat, os, datetime
 
 
 EB500_ADDR = '192.168.2.5'
+LOCALHOST = '127.0.0.1'
 CMD_PORT = 5555
 UDP_PORT = 19000
+VRT_PORT = 4991
 TCP_PORT = 5565
-
+IQ_PORT = 5557
 
 class Eb500Cmd (telnetlib.Telnet):
     def __init__(self, host=None, port=0):
@@ -38,9 +40,9 @@ class Eb500Cmd (telnetlib.Telnet):
     def send_cmd(self, cmd):
         print "> "+ cmd
         self.write(cmd+"\n")
-        ans = self.read_eager()     # FIXME: does not receive anything
+        #ans = self.read_eager()     # FIXME: does not receive anything
         #print "< " + ans
-        return ans
+        #return ans
 
 
 def StrToHex(s):
@@ -55,7 +57,7 @@ def StrToHex(s):
 
 def OwnIP():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("gmail.com",80))
+    s.connect(("fritz.box",80))
     ip = (s.getsockname()[0])
     s.close()
     return ip
@@ -116,7 +118,7 @@ def parseMessage(msg):
             #here comes a hack to set the level ragen according to the actual signal situation
             #eb500.send_cmd('stat:ext:data #219564L000009:0:0 '+str(min(if_pan[0])-30))
             #eb500.send_cmd('stat:ext:data #218563L000008:0:0 '+str(max(if_pan[0])+80))
-    elif tag == 901:  # IFPan
+    elif tag == 901:  # IQ
         frame_count, reserved, opt_header_length, selector_flags = struct.unpack('!HcBL', msg[20:28])
         #print "frames: ", frame_count
         if opt_header_length != 0:
@@ -124,7 +126,8 @@ def parseMessage(msg):
             opt_header = struct.unpack('<hhLLLHhHh8sQL4sQh', msg[28:28+opt_header_length])
             #print "opt header: ", opt_header
         # now we have the values
-        iq_file.write(msg[28+opt_header_length:])
+        #iq_file.write(msg[28+opt_header_length:])
+        #iq_sock.sendto(str(msg[28+opt_header_length:]), (LOCALHOST, IQ_PORT))   # FIXME: this does not work yet
         if packets%200 == 0:
             print 'IQ data' #, opt_header
     else:
@@ -143,9 +146,27 @@ eb500=Eb500Cmd(EB500_ADDR, CMD_PORT)
 # open udp channel
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(('0.0.0.0', UDP_PORT))
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+#sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+# outbound UDP socket for gnuradio UDP source
+iq_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+#vrt_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#vrt_sock.bind(('0.0.0.0', VRT_PORT))
+
 
 iq_file = False
+
+p = pyaudio.PyAudio()
+audio_stream = p.open(format=pyaudio.paInt16,
+                channels=2,
+                rate=32000,
+                output=True)
+sndfl_stream = p.open(output_device_index = 4,
+                format=pyaudio.paInt16,
+                channels=2,
+                rate=32000,
+                output=True)
 
 cmd_str = ''
 for arg in sys.argv:
@@ -159,32 +180,22 @@ for arg in sys.argv:
     else:
         print "invalid argument ", arg
 
-
-
 eb500.send_cmd('TRAC:UDP:DEL ALL')
 eb500.send_cmd('TRAC:UDP:TAG \"'+OwnIP()+'\",' + UDP_PORT.__str__() + cmd_str)
 eb500.send_cmd('TRAC:UDP:FLAG \"'+OwnIP()+'\",' + UDP_PORT.__str__() + ',\"OPT\",\"SWAP\"')
-
 eb500.send_cmd('SYST:AUD:REM:MODE 1')
 eb500.send_cmd('SYST:IF:REM:MODE SHORT')
+eb500.send_cmd('SYST:COMM:LAN:PING 0')
 
-p = pyaudio.PyAudio()
-audio_stream = p.open(format=pyaudio.paInt16,
-                channels=2,
-                rate=32000,
-                output=True)
-sndfl_stream = p.open(output_device_index = 4,
-                format=pyaudio.paInt16,
-                channels=2,
-                rate=32000,
-                output=True)
-
+#eb500.send_cmd('TRAC:UDP:TAG \"'+OwnIP()+'\",' + VRT_PORT.__str__() + ',VIF')
 
 
 try:
     while True:
-        data, addr = sock.recvfrom(102400) # get large UDP packet from receiver
+        data, addr = sock.recvfrom(102400)  # get large UDP packet from receiver
         parseMessage(data)
+        #vrt_data, addr = vrt_sock.recvfrom(102400)           #try vrt, drop package
+        #print "got vrt len:", len(data)
 
 finally:
     eb500.close()
