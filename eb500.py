@@ -200,6 +200,7 @@ try:
         #print "got vrt len:", len(data)
 
 finally:
+    eb500.send_cmd('TRAC:UDP:DEL ALL')
     eb500.close()
     sock.close()
     audio_stream.stop_stream()

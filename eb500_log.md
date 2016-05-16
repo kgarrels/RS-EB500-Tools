@@ -7,7 +7,8 @@
     * Informed R&D Customer Support, promised to send an answer after easter.
 2016-04-24
     * upgraded to 4.56 again
-    * internal GUI lost connection to receiver, both run, but manual operation does not go through. remote GUI still works as normal
+    * internal GUI lost connection to receiver, both run, but manual operation does not go through. 
+      remote GUI still works as normal
 2016-05-01
     * lock-up again, downgraded to 4.50
     * again internal communication loss with error message from gui ;-(
