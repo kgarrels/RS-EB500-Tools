@@ -16,6 +16,7 @@
 #
 
 
+
 import telnetlib
 import socket
 import struct
@@ -99,8 +100,8 @@ def parseMessage(msg):
         if err != None:
             print "pyudio write error: ", err
 #        err = sndfl_stream.write(msg[28+opt_header_length:])
-        if err != None:
-            print "pyudio write error: ", err
+#        if err != None:
+#            print "pyudio write error: ", err
     elif tag == 501:  # IFPan
         frame_count, reserved, opt_header_length, selector_flags = struct.unpack('!HcBL', msg[20:28])
         #print "frames: ", frame_count
@@ -162,11 +163,12 @@ audio_stream = p.open(format=pyaudio.paInt16,
                 channels=2,
                 rate=32000,
                 output=True)
-sndfl_stream = p.open(output_device_index = 4,
-                format=pyaudio.paInt16,
-                channels=2,
-                rate=32000,
-                output=True)
+
+# sndfl_stream = p.open(output_device_index = 4,
+#                 format=pyaudio.paInt16,
+#                 channels=2,
+#                 rate=32000,
+#                output=True)
 
 cmd_str = ''
 for arg in sys.argv:
