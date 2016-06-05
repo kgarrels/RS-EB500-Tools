@@ -14,9 +14,16 @@
 ### 2016-05-05
     - CAT5 cable from FP to receiver was not klicked in. Fixed.
 ### 2016-05-16
-    - discovered ftp access in antenna hcorrection factor manual, user: EB500, pass: EB500
-    - also works for telnet, thensome consolse commands are available, try "help"
+    - discovered ftp access in antenna correction factor manual, user: EB500, pwd: EB500
+    - also works for telnet, then some consolse commands are available, try "help"
     - "rld" displays a ramlog, monitoring everything that is going on in the receiver
+### 2016-06-05
+    - what really happens when the front pannel stalls:
+        - the receiver still works without problems from remote
+        - the ramlog does not show anything special
+        - the front panel display follows the receiver
+        - input from front panel is ignored
+        - after some time, the input is processed
      
     
 
