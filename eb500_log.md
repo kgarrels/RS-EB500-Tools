@@ -24,6 +24,9 @@
         - the front panel display follows the receiver
         - input from front panel is ignored
         - after some time, the input is processed
+### 2016-06-19
+    - now disassembled also the fronst panel PC, cleaned RJ45 connection with air
+    - since then, np more drops of eth0 in ramlog, and no more interruptions of internal gui
      
     
 

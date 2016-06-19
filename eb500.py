@@ -81,7 +81,7 @@ def parseMessage(msg):
 
     # decode generic attribute
     tag, length = struct.unpack('!HH', msg[16:20])          # generic attribute, we need the tag
-
+    #print "msg header", StrToHex(msg[0:16])
 
     # decode attribute according to tag
     if tag == 401:  # audio
@@ -90,18 +90,20 @@ def parseMessage(msg):
         if opt_header_length != 0:
             #print "opt header length: ", opt_header_length, "msg length: ", len(msg)
             opt_header = struct.unpack('<hhLLH8sL6sQh', msg[28:28+opt_header_length])
+            #print opt_header
             if (opt_header[0:7] != old_header[0:7]) & (opt_header[0]) == 1:
-                time = datetime.datetime(1970,1,1) + datetime.timedelta(microseconds=opt_header[8]/1000)       #audio time stamp
-                print "audio", (opt_header[2]/1e6).__format__(".5f"), "MHz", opt_header[5].split('\x00')[0], opt_header[3]/1e3, "kHz", \
-                      "latency", (datetime.datetime.utcnow()-time).microseconds / 1000, "ms"
+                #time = datetime.datetime(1970,1,1) + datetime.timedelta(microseconds=opt_header[8]/1000)       #audio time stamp
+                print "audio", (opt_header[2]/1e6).__format__(".5f"), "MHz", opt_header[5].split('\x00')[0], opt_header[3]/1e3, "kHz" #, \
+#                      "latency", (datetime.datetime.utcnow()-time).microseconds / 1000, "ms"
                 old_header = opt_header
-        # output, assume audio mode 1. Audio goes to default device and soundflower in parallel
-        err = audio_stream.write(msg[28+opt_header_length:])
-        if err != None:
-            print "pyudio write error: ", err
-#        err = sndfl_stream.write(msg[28+opt_header_length:])
-#        if err != None:
-#            print "pyudio write error: ", err
+        # output, assume audio mode 1. Audio goes to default device
+        if frame_count%4 == 0:
+            err = audio_stream.write(msg[28+opt_header_length:])
+            #print StrToHex(msg[28+opt_header_length:])
+            if err != None:
+                print "pyudio write error: ", err
+        else:
+            print "incomplete frames: ", frame_count
     elif tag == 501:  # IFPan
         frame_count, reserved, opt_header_length, selector_flags = struct.unpack('!HcBL', msg[20:28])
         #print "frames: ", frame_count
@@ -164,12 +166,6 @@ audio_stream = p.open(format=pyaudio.paInt16,
                 rate=32000,
                 output=True)
 
-# sndfl_stream = p.open(output_device_index = 4,
-#                 format=pyaudio.paInt16,
-#                 channels=2,
-#                 rate=32000,
-#                output=True)
-
 cmd_str = ''
 for arg in sys.argv:
     if arg == 'au':
@@ -177,8 +173,8 @@ for arg in sys.argv:
     elif arg == 'if':
         cmd_str += ',IFPan'
     elif arg == 'iq':
-        cmd_str += ',IF'    # TODO: should have a fifo warning or option
-        iq_file = open('iq.raw','w')
+        cmd_str += ',IF'  # TODO: should have a fifo warning or option
+        iq_file = open('iq.raw', 'w')
     else:
         print "invalid argument ", arg
 
@@ -194,7 +190,7 @@ eb500.send_cmd('SYST:COMM:LAN:PING 0')
 
 try:
     while True:
-        data, addr = sock.recvfrom(102400)  # get large UDP packet from receiver
+        data, addr = sock.recvfrom(10240)  # get large UDP packet from receiver
         parseMessage(data)
         #vrt_data, addr = vrt_sock.recvfrom(102400)           #try vrt, drop package
         #print "got vrt len:", len(data)
@@ -204,9 +200,7 @@ finally:
     eb500.close()
     sock.close()
     audio_stream.stop_stream()
-    sndfl_stream.stop_stream()
     audio_stream.close()
-    sndfl_stream.close()
     p.terminate()
     if iq_file != False:
         iq_file.close()
