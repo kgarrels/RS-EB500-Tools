@@ -32,7 +32,7 @@
     - back to 4.56 on the receiver  (GUI still on 4.50)
     - lockup occurs
     - ramdlog does not show anything special, maybe some dropouts oun eth90
-"""
+```
     eb500> rld
 Displaying ramlog virtual range 0x0 - 0x26af
 __RAMLOG_SESSION_START__
@@ -247,7 +247,7 @@ RS232 client started [r = 3]
 2979.166 ifplugd: Linkstate on eth0 changed to Down.
 2981.166 ifplugd: Linkstate on eth0 changed to Up.
 eb500> 
-"""
+``
 
     
 
