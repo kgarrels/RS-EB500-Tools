@@ -32,6 +32,7 @@
     - back to 4.56 on the receiver  (GUI still on 4.50)
     - lockup occurs
     - ramdlog does not show anything special, maybe some dropouts oun eth90
+    - conclusion: back to 4.50 whoch is reliable for me
 ```
     eb500> rld
 Displaying ramlog virtual range 0x0 - 0x26af
