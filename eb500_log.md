@@ -28,7 +28,7 @@
     - now disassembled also the fronst panel PC, cleaned RJ45 connection with air
     - since then, np more drops of eth0 in ramlog, and no more interruptions of internal gui
 
-#### 2016-08-03
+### 2016-08-03
     - back to 4.56 on the receiver  (GUI still on 4.50)
     - lockup occurs
     - ramdlog does not show anything special, maybe some dropouts oun eth90
