@@ -97,13 +97,9 @@ def parseMessage(msg):
 #                      "latency", (datetime.datetime.utcnow()-time).microseconds / 1000, "ms"
                 old_header = opt_header
         # output, assume audio mode 1. Audio goes to default device
-        if frame_count%4 == 0:
-            err = audio_stream.write(msg[28+opt_header_length:])
-            #print StrToHex(msg[28+opt_header_length:])
-            if err != None:
-                print "pyudio write error: ", err
-        else:
-            print "incomplete frames: ", frame_count
+        err = audio_stream.write(msg[28+opt_header_length:28+opt_header_length+frame_count*4])
+        if err != None:
+            print "pyudio write error: ", err
     elif tag == 501:  # IFPan
         frame_count, reserved, opt_header_length, selector_flags = struct.unpack('!HcBL', msg[20:28])
         #print "frames: ", frame_count

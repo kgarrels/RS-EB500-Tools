@@ -34,7 +34,7 @@
     - ramdlog does not show anything special, maybe some dropouts oun eth90
     - conclusion: back to 4.50 whoch is reliable for me
 ```
-    eb500> rld
+eb500> rld
 Displaying ramlog virtual range 0x0 - 0x26af
 __RAMLOG_SESSION_START__
 exec: Booting OSE5.7 (BL770317)
