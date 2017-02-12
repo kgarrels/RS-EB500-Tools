@@ -6,7 +6,6 @@
     </content>
     <orderEntry type="jdk" jdkName="Python 2.7.13 (/opt/local/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="eb500_game" />
   </component>
   <component name="TestRunnerService">
     <option name="projectConfiguration" value="Nosetests" />

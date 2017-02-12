@@ -249,7 +249,9 @@ RS232 client started [r = 3]
 2981.166 ifplugd: Linkstate on eth0 changed to Up.
 eb500> 
 ``
-
+### 2017-02-12
+    - 4.40 received, installed. Worked nicely for ine day, then lock up again.
+    - sanitized, only will use presets etc from 4.60 version.
     
 
 

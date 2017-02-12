@@ -68,6 +68,7 @@ def parseMessage(msg):
 
     err = None
     # decode eb200 header
+    # expects a fresh packet, does not start inthe middle of something :-)
     magic, ver_min, ver_maj, seq_low, seq_high, data_Size =  struct.unpack('!LHHHHL', msg[0:16])     # eb200 header
     if (eb200_magic == 0) & (magic == 0x0EB200):
         print "received 1st EB200 frame, version ",ver_maj,".",ver_min
@@ -97,7 +98,7 @@ def parseMessage(msg):
 #                      "latency", (datetime.datetime.utcnow()-time).microseconds / 1000, "ms"
                 old_header = opt_header
         # output, assume audio mode 1. Audio goes to default device
-        err = audio_stream.write(msg[28+opt_header_length:28+opt_header_length+frame_count*4])
+        err = audio_stream.write(msg[28+opt_header_length:])
         if err != None:
             print "pyudio write error: ", err
     elif tag == 501:  # IFPan
