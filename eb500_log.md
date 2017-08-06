@@ -253,6 +253,9 @@ eb500>
     - 4.40 received, installed. Worked nicely for ine day, then lock up again.
     - sanitized, only will use presets etc from 4.60 version.
     
-
+### 2017-08-06
+    - 4.70 provided by R&S, installed. Receiver crahed to non-responsive.
+    Had to use the init method they described. 
+    Hint: "init device" will take vvveeerrryyy long.
 
 
