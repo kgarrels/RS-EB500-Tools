@@ -255,7 +255,10 @@ eb500>
     
 ### 2017-08-06
     - 4.70 provided by R&S, installed. Receiver crahed to non-responsive.
-    Had to use the init method they described. 
-    Hint: "init device" will take vvveeerrryyy long.
+    - Had to use the init method they described. 
+    - Hint: "init device" will take vvveeerrryyy long.
+    - lock-up still occurs
+    - trying now: disable use of filter calibration data
+    
 
 
