@@ -247,18 +247,17 @@ RS232 client started [r = 3]
 2641.166 ifplugd: Linkstate on eth0 changed to Up.
 2979.166 ifplugd: Linkstate on eth0 changed to Down.
 2981.166 ifplugd: Linkstate on eth0 changed to Up.
-eb500> 
-``
+eb500>
+```
+
 ### 2017-02-12
     - 4.40 received, installed. Worked nicely for ine day, then lock up again.
     - sanitized, only will use presets etc from 4.60 version.
     
 ### 2017-08-06
-    - 4.70 provided by R&S, installed. Receiver crahed to non-responsive.
+    - 4.70 provided by R&S, installed. Receiver crashed to non-responsive.
     - Had to use the init method they described. 
     - Hint: "init device" will take vvveeerrryyy long.
-    - lock-up still occurs
-    - trying now: disable use of filter calibration data
-    - does the same thing: locks up occasionally
-
+    - lock-up error in LSB/USB still occurs
+    
 
