@@ -259,6 +259,6 @@ eb500>
     - Hint: "init device" will take vvveeerrryyy long.
     - lock-up still occurs
     - trying now: disable use of filter calibration data
-    
+    - does the same thing: locks up occasionally
 
 
