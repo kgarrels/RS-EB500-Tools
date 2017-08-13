@@ -251,7 +251,7 @@ eb500>
 ```
 
 ### 2017-02-12
-    - 4.40 received, installed. Worked nicely for ine day, then lock up again.
+    - 4.60 received, installed. Worked nicely for ine day, then lock up again.
     - sanitized, only will use presets etc from 4.60 version.
     
 ### 2017-08-06
