@@ -260,4 +260,6 @@ eb500>
     - Hint: "init device" will take vvveeerrryyy long.
     - lock-up error in LSB/USB still occurs
     
-
+### 2021-08-06
+    - changed RX battery
+    - 4.90 was installed some time ago, 4.95 exists, no changes for RX, only for remote GUI
